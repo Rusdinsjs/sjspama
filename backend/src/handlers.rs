@@ -40,18 +40,9 @@ pub async fn register_employee(
     State(pool): State<PgPool>,
     Json(input): Json<CreateEmployeeInput>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let join_date = match input.join_date {
-        Some(ref d) if !d.is_empty() => NaiveDate::from_str(d).ok(),
-        _ => None
-    };
-    let birth_date = match input.birth_date {
-        Some(ref d) if !d.is_empty() => NaiveDate::from_str(d).ok(),
-        _ => None
-    };
-    let simper_expiry = match input.simper_expiry {
-        Some(ref d) if !d.is_empty() => NaiveDate::from_str(d).ok(),
-        _ => None
-    };
+    let join_date = input.join_date.as_ref().and_then(|d| d.parse::<NaiveDate>().ok());
+    let birth_date = input.birth_date.as_ref().and_then(|d| d.parse::<NaiveDate>().ok());
+    let simper_expiry = input.simper_expiry.as_ref().and_then(|d| d.parse::<NaiveDate>().ok());
 
     sqlx::query(
         "INSERT INTO employees (
