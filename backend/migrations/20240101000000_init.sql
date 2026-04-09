@@ -1,0 +1,90 @@
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(50) DEFAULT 'OPERATOR',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE operators (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    nik VARCHAR(100) UNIQUE,
+    name VARCHAR(255) NOT NULL,
+    company VARCHAR(100) DEFAULT 'SJS',
+    status VARCHAR(50) DEFAULT 'Active',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE units (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    cn_unit VARCHAR(100) UNIQUE NOT NULL,
+    model_unit VARCHAR(150) NOT NULL,
+    type_unit VARCHAR(100) NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    contract_number VARCHAR(100),
+    checker_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE daily_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    unit_id UUID NOT NULL REFERENCES units(id) ON DELETE CASCADE,
+    date DATE NOT NULL,
+    shift SMALLINT NOT NULL,
+    operator_name VARCHAR(255) NOT NULL,
+    hm_start NUMERIC(10, 2) NOT NULL,
+    hm_stop NUMERIC(10, 2) NOT NULL,
+    total_hm NUMERIC(10, 2) NOT NULL,
+    wh NUMERIC(10, 2) NOT NULL,
+    stb NUMERIC(10, 2) NOT NULL,
+    bd NUMERIC(10, 2) NOT NULL,
+    mohh NUMERIC(10, 2) DEFAULT 12,
+    remarks TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(unit_id, date, shift)
+);
+
+CREATE TABLE rates (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    unit_type VARCHAR(100) NOT NULL,
+    rate_type VARCHAR(100) NOT NULL,
+    amount NUMERIC(15, 2) NOT NULL,
+    valid_from DATE NOT NULL,
+    valid_to DATE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE fuel_penalties (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    unit_id UUID NOT NULL REFERENCES units(id) ON DELETE CASCADE,
+    period DATE NOT NULL,
+    std_fuel_liter NUMERIC(10, 2) NOT NULL,
+    actual_fuel NUMERIC(10, 2) NOT NULL,
+    backcharge NUMERIC(15, 2) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE incidents (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    unit_id UUID NOT NULL REFERENCES units(id) ON DELETE CASCADE,
+    date DATE NOT NULL,
+    description TEXT NOT NULL,
+    is_critical BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE system_configs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    config_key VARCHAR(100) UNIQUE NOT NULL,
+    config_value TEXT NOT NULL,
+    description TEXT,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
