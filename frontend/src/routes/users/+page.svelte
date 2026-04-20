@@ -100,7 +100,11 @@
               </div>
             </td>
             <td class="px-6 py-4">
-              <span class="px-3 py-1 rounded-full text-xs font-bold {user.role === 'ADMIN' ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-400/20' : 'bg-sky-500/20 text-sky-400 border border-sky-400/20'}">
+              <span class="px-3 py-1 rounded-full text-xs font-bold {
+                user.role === 'ADMIN' ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-400/20' : 
+                user.role === 'SUPERVISOR' ? 'bg-amber-500/20 text-amber-400 border border-amber-400/20' :
+                'bg-sky-500/20 text-sky-400 border border-sky-400/20'
+              }">
                 {user.role}
               </span>
             </td>
@@ -128,6 +132,7 @@
     <div class="w-full max-w-lg glass p-8 rounded-3xl border border-white/10 shadow-2xl relative">
       <button 
         onclick={() => showCreateModal = false}
+        aria-label="Close modal"
         class="absolute top-6 right-6 text-slate-400 hover:text-white transition-colors"
       >
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -154,6 +159,7 @@
           <label for="new-role" class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Assign Role</label>
           <select id="new-role" bind:value={newUser.role} class="w-full bg-[#1e293b] border border-white/10 rounded-2xl px-5 py-3 text-white focus:outline-none focus:border-sky-500">
             <option value="OPERATOR">Operator</option>
+            <option value="SUPERVISOR">Supervisor</option>
             <option value="ADMIN">Administrator</option>
             <option value="CHECKER">Admin Checker</option>
           </select>

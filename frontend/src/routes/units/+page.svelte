@@ -12,6 +12,7 @@
     ct_expired?: string;
     bast_number?: string;
     skbp_pajak?: string;
+    licence?: string;
   }
 
   let units = $state<Unit[]>([]);
@@ -19,6 +20,7 @@
   let loading = $state(true);
   let loadingLogs = $state(false);
   let showModal = $state(false);
+  let licenses = $state<any[]>([]);
   let showDeleteConfirm = $state(false);
   let showStatusDropdown = $state(false);
   let modalMode = $state<'create' | 'edit' | 'view'>('create');
@@ -34,16 +36,36 @@
     ct_number: '',
     ct_expired: '',
     bast_number: '',
-    skbp_pajak: ''
+    skbp_pajak: '',
+    licence: ''
+  });
+
+  // const licenceOptions = ['ROCK B', 'GRAPLE', 'PC 210', 'PC350', 'd 85', 'LV', 'LONG ARM', 'KOM'];
+  let licenceOptions = $derived(licenses.map(l => l.name));
+
+  $effect(() => {
+    if (modalMode === 'view') return;
+    const model = unitForm.model_unit.toUpperCase();
+    if (model.startsWith('SV')) {
+      unitForm.type_unit = 'Compactor';
+    } else if (model.startsWith('D')) {
+      unitForm.type_unit = 'Dozer';
+    } else if (model.startsWith('PC')) {
+      unitForm.type_unit = 'Excavator';
+    }
   });
 
   const API_BASE = `http://${typeof window !== 'undefined' ? window.location.hostname : '127.0.0.1'}:8081`;
 
-  async function fetchUnits() {
+  async function fetchInitialData() {
     loading = true;
     try {
-      const res = await fetch(`${API_BASE}/api/units`);
-      if (res.ok) units = await res.json();
+      const [unitRes, licRes] = await Promise.all([
+        fetch(`${API_BASE}/api/units`),
+        fetch(`${API_BASE}/api/licenses`)
+      ]);
+      if (unitRes.ok) units = await unitRes.json();
+      if (licRes.ok) licenses = await licRes.json();
     } catch (e) {
       console.error(e);
     } finally {
@@ -55,7 +77,7 @@
     modalMode = 'create';
     unitForm = { 
       cn_unit: '', type_unit: '', model_unit: '', status: 'Utama',
-      hull_number: '', ct_number: '', ct_expired: '', bast_number: '', skbp_pajak: ''
+      hull_number: '', ct_number: '', ct_expired: '', bast_number: '', skbp_pajak: '', licence: ''
     };
     showModal = true;
   }
@@ -72,7 +94,8 @@
       ct_number: unit.ct_number || '',
       ct_expired: unit.ct_expired || '',
       bast_number: unit.bast_number || '',
-      skbp_pajak: unit.skbp_pajak || ''
+      skbp_pajak: unit.skbp_pajak || '',
+      licence: unit.licence || ''
     };
     showModal = true;
   }
@@ -89,7 +112,8 @@
       ct_number: unit.ct_number || '-',
       ct_expired: unit.ct_expired || '-',
       bast_number: unit.bast_number || '-',
-      skbp_pajak: unit.skbp_pajak || '-'
+      skbp_pajak: unit.skbp_pajak || '-',
+      licence: unit.licence || '-'
     };
     showModal = true;
     
@@ -121,7 +145,7 @@
       });
       if (res.ok) {
         showModal = false;
-        fetchUnits();
+        fetchInitialData();
       }
     } catch (e) {
       console.error(e);
@@ -139,14 +163,14 @@
       const res = await fetch(`${API_BASE}/api/units/${unitToIdDelete}`, { method: 'DELETE' });
       if (res.ok) {
         showDeleteConfirm = false;
-        fetchUnits();
+        fetchInitialData();
       }
     } catch (e) {
       console.error(e);
     }
   }
 
-  onMount(fetchUnits);
+  onMount(fetchInitialData);
 </script>
 
 <svelte:head>
@@ -175,6 +199,7 @@
       <tr class="bg-white/5 border-b border-white/10 uppercase text-[10px] font-black tracking-[0.2em] text-slate-400">
         <th class="px-6 py-5">Unit CN</th>
         <th class="px-6 py-5">Type / Model</th>
+        <th class="px-6 py-5">Required License</th>
         <th class="px-6 py-5">Status</th>
         <th class="px-6 py-5 text-right">Actions</th>
       </tr>
@@ -197,6 +222,15 @@
             <td class="px-6 py-4">
               <div class="text-sm font-medium text-white">{unit.type_unit}</div>
               <div class="text-xs text-slate-500">{unit.model_unit}</div>
+            </td>
+            <td class="px-6 py-4">
+              {#if unit.licence}
+                <span class="px-2 py-1 bg-sky-500/10 text-sky-400 text-[10px] font-black rounded border border-sky-400/20 uppercase">
+                  {unit.licence}
+                </span>
+              {:else}
+                <span class="text-slate-600 italic text-[10px]">— No Req. —</span>
+              {/if}
             </td>
             <td class="px-6 py-4">
               <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider {unit.status === 'Utama' ? 'bg-sky-500/20 text-sky-400 border border-sky-400/20' : 'bg-slate-500/20 text-slate-400 border border-slate-400/20'}">
@@ -258,7 +292,11 @@
             {#if modalMode === 'create'}Registrasi unit baru ke sistem{:else}{unitForm.type_unit} — {unitForm.model_unit}{/if}
           </p>
         </div>
-        <button onclick={() => { showModal = false; showStatusDropdown = false; }} class="p-2 bg-white/5 hover:bg-white/10 rounded-xl text-slate-400 hover:text-white transition-all">
+        <button 
+          onclick={() => { showModal = false; showStatusDropdown = false; }} 
+          class="p-2 bg-white/5 hover:bg-white/10 rounded-xl text-slate-400 hover:text-white transition-all"
+          aria-label="Close modal"
+        >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -285,6 +323,10 @@
             <div class="p-4 bg-white/5 border border-white/10 rounded-2xl">
               <div class="text-[10px] font-black text-slate-500 uppercase mb-1">No. BAST</div>
               <div class="text-xl font-black text-white truncate">{unitForm.bast_number}</div>
+            </div>
+            <div class="p-4 bg-sky-500/10 border border-sky-500/20 rounded-2xl">
+              <div class="text-[10px] font-black text-sky-500 uppercase mb-1">Type Licence</div>
+              <div class="text-xl font-black text-sky-400">{unitForm.licence}</div>
             </div>
           </div>
 
@@ -427,9 +469,18 @@
                   <input id="bast_number" type="text" bind:value={unitForm.bast_number} placeholder="e.g. BAST/SJS/001" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-amber-500/50 transition-all">
                 </div>
                 <div>
-                  <label for="skbp_pajak" class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 px-1">SKBP (Pajak)</label>
-                  <input id="skbp_pajak" type="text" bind:value={unitForm.skbp_pajak} placeholder="e.g. Active" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-amber-500/50 transition-all">
+                  <label for="licence" class="block text-[10px] font-black text-sky-400 uppercase tracking-widest mb-3 px-1">Licence Operator (Required)</label>
+                  <select id="licence" bind:value={unitForm.licence} class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-sky-500 transition-all font-bold">
+                    <option value="" class="bg-[#0f172a]">-- Pilih Licence --</option>
+                    {#each licenceOptions as opt}
+                      <option value={opt} class="bg-[#0f172a]">{opt}</option>
+                    {/each}
+                  </select>
                 </div>
+              </div>
+              <div class="border-t border-white/5 pt-8">
+                <label for="skbp_pajak" class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 px-1">SKBP (Pajak)</label>
+                <input id="skbp_pajak" type="text" bind:value={unitForm.skbp_pajak} placeholder="e.g. Active" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-amber-500/50 transition-all">
               </div>
             </div>
 

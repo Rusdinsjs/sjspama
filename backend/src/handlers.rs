@@ -13,7 +13,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::models::{
     CreateDailyLogInput, Unit, User, LoginInput, CreateUserInput, 
-    AuthResponse, CreateUnitInput, Employee, CreateEmployeeInput
+    AuthResponse, CreateUnitInput, Employee, CreateEmployeeInput, UpdateProfileInput,
+    WorkLocation, CreateWorkLocationInput, OperatorAssignment, CreateOperatorAssignmentInput, OperatorAssignmentDetail,
+    Position, CreatePositionInput, License, CreateLicenseInput
 };
 
 pub async fn get_employees(
@@ -23,7 +25,7 @@ pub async fn get_employees(
         "SELECT id, nik, name, company, position, department, status, join_date, 
          contract_type, ktp_number, full_address, village, district, city, province, 
          origin_status, gender, marital_status, religion, birth_place, birth_date, 
-         education, email, phone_number, simper_number, simper_expiry, created_at 
+         education, email, phone_number, simper_number, simper_expiry, batch_number, licence, created_at 
          FROM employees ORDER BY name ASC"
     )
     .fetch_all(&pool)
@@ -49,9 +51,9 @@ pub async fn register_employee(
             nik, name, company, position, department, status, join_date,
             contract_type, ktp_number, full_address, village, district, city, province,
             origin_status, gender, marital_status, religion, birth_place, birth_date,
-            education, email, phone_number, simper_number, simper_expiry
+            education, email, phone_number, simper_number, simper_expiry, batch_number, licence, photo_url
          ) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28)
          ON CONFLICT (nik) DO UPDATE SET
             name = EXCLUDED.name,
             company = EXCLUDED.company,
@@ -76,7 +78,10 @@ pub async fn register_employee(
             email = EXCLUDED.email,
             phone_number = EXCLUDED.phone_number,
             simper_number = EXCLUDED.simper_number,
-            simper_expiry = EXCLUDED.simper_expiry"
+            simper_expiry = EXCLUDED.simper_expiry,
+            batch_number = EXCLUDED.batch_number,
+            licence = EXCLUDED.licence,
+            photo_url = EXCLUDED.photo_url"
     )
     .bind(&input.nik)
     .bind(&input.name)
@@ -103,6 +108,9 @@ pub async fn register_employee(
     .bind(&input.phone_number)
     .bind(&input.simper_number)
     .bind(simper_expiry)
+    .bind(&input.batch_number)
+    .bind(&input.licence)
+    .bind(&input.photo_url)
     .execute(&pool)
     .await
     .map_err(|e| {
@@ -137,8 +145,8 @@ pub async fn update_employee(
             contract_type = $8, ktp_number = $9, full_address = $10, village = $11, district = $12, 
             city = $13, province = $14, origin_status = $15, gender = $16, marital_status = $17, 
             religion = $18, birth_place = $19, birth_date = $20, education = $21, email = $22, 
-            phone_number = $23, simper_number = $24, simper_expiry = $25
-         WHERE id = $26"
+            phone_number = $23, simper_number = $24, simper_expiry = $25, batch_number = $26, licence = $27, photo_url = $28
+         WHERE id = $29"
     )
     .bind(&input.nik)
     .bind(&input.name)
@@ -165,6 +173,9 @@ pub async fn update_employee(
     .bind(&input.phone_number)
     .bind(&input.simper_number)
     .bind(simper_expiry)
+    .bind(&input.batch_number)
+    .bind(&input.licence)
+    .bind(&input.photo_url)
     .bind(id)
     .execute(&pool)
     .await
@@ -196,8 +207,8 @@ pub async fn register_unit(
     };
 
     sqlx::query(
-        "INSERT INTO units (cn_unit, model_unit, type_unit, status, hull_number, ct_number, ct_expired, bast_number, skbp_pajak) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
+        "INSERT INTO units (cn_unit, model_unit, type_unit, status, hull_number, ct_number, ct_expired, bast_number, skbp_pajak, licence) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"
     )
     .bind(&input.cn_unit)
     .bind(&input.model_unit)
@@ -208,6 +219,7 @@ pub async fn register_unit(
     .bind(ct_expired)
     .bind(&input.bast_number)
     .bind(&input.skbp_pajak)
+    .bind(&input.licence)
     .execute(&pool)
     .await
     .map_err(|e| {
@@ -241,7 +253,7 @@ pub async fn get_units(
     State(pool): State<PgPool>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
     let units = sqlx::query_as::<_, Unit>(
-        "SELECT id, cn_unit, model_unit, type_unit, status, hull_number, ct_number, ct_expired, bast_number, skbp_pajak FROM units"
+        "SELECT id, cn_unit, model_unit, type_unit, status, hull_number, ct_number, ct_expired, bast_number, skbp_pajak, licence FROM units"
     )
     .fetch_all(&pool)
     .await
@@ -422,7 +434,7 @@ pub async fn update_unit(
     };
 
     sqlx::query(
-        "UPDATE units SET cn_unit = $1, model_unit = $2, type_unit = $3, status = $4, hull_number = $5, ct_number = $6, ct_expired = $7, bast_number = $8, skbp_pajak = $9 WHERE id = $10"
+        "UPDATE units SET cn_unit = $1, model_unit = $2, type_unit = $3, status = $4, hull_number = $5, ct_number = $6, ct_expired = $7, bast_number = $8, skbp_pajak = $9, licence = $10 WHERE id = $11"
     )
     .bind(&input.cn_unit)
     .bind(&input.model_unit)
@@ -433,6 +445,7 @@ pub async fn update_unit(
     .bind(ct_expired)
     .bind(&input.bast_number)
     .bind(&input.skbp_pajak)
+    .bind(&input.licence)
     .bind(id)
     .execute(&pool)
     .await
@@ -488,4 +501,294 @@ pub async fn get_unit_logs(
     .collect::<Vec<_>>();
 
     Ok(Json(logs))
+}
+pub async fn update_profile(
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+    Json(input): Json<UpdateProfileInput>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    if let Some(password) = input.password {
+        if !password.is_empty() {
+            let salt = SaltString::generate(&mut OsRng);
+            let argon2 = Argon2::default();
+            let password_hash = argon2
+                .hash_password(password.as_bytes(), &salt)
+                .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Encoding error".to_string()))?
+                .to_string();
+
+            sqlx::query("UPDATE users SET name = $1, email = $2, password_hash = $3 WHERE id = $4")
+                .bind(&input.name)
+                .bind(&input.email)
+                .bind(&password_hash)
+                .bind(id)
+                .execute(&pool)
+                .await
+                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        } else {
+            sqlx::query("UPDATE users SET name = $1, email = $2 WHERE id = $3")
+                .bind(&input.name)
+                .bind(&input.email)
+                .bind(id)
+                .execute(&pool)
+                .await
+                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        }
+    } else {
+        sqlx::query("UPDATE users SET name = $1, email = $2 WHERE id = $3")
+            .bind(&input.name)
+            .bind(&input.email)
+            .bind(id)
+            .execute(&pool)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    }
+
+    Ok(StatusCode::OK)
+}
+
+pub async fn get_work_locations(
+    State(pool): State<PgPool>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let locations = sqlx::query_as::<_, WorkLocation>(
+        "SELECT id, name, description, created_at FROM work_locations ORDER BY name ASC"
+    )
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Database error fetching work locations: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, format!("Database Error: {}", e))
+    })?;
+
+    Ok(Json(locations))
+}
+
+pub async fn create_work_location(
+    State(pool): State<PgPool>,
+    Json(input): Json<CreateWorkLocationInput>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    sqlx::query("INSERT INTO work_locations (name, description) VALUES ($1, $2)")
+        .bind(&input.name)
+        .bind(&input.description)
+        .execute(&pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Work location creation error: {}", e);
+            (StatusCode::CONFLICT, "Work location name already exists or data error".to_string())
+        })?;
+
+    Ok(StatusCode::CREATED)
+}
+
+pub async fn update_work_location(
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+    Json(input): Json<CreateWorkLocationInput>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    sqlx::query("UPDATE work_locations SET name = $1, description = $2 WHERE id = $3")
+        .bind(&input.name)
+        .bind(&input.description)
+        .bind(id)
+        .execute(&pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Update error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
+        })?;
+    
+    Ok(StatusCode::OK)
+}
+
+pub async fn delete_work_location(
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    sqlx::query("DELETE FROM work_locations WHERE id = $1")
+        .bind(id)
+        .execute(&pool)
+        .await
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string()))?;
+    
+    Ok(StatusCode::NO_CONTENT)
+}
+
+pub async fn get_operator_assignments(
+    State(pool): State<PgPool>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let assignments = sqlx::query(
+        r#"
+        SELECT 
+            oa.id, 
+            oa.employee_id, 
+            e.name as employee_name, 
+            oa.unit_id, 
+            u.cn_unit, 
+            oa.assignment_date, 
+            oa.shift
+        FROM operator_assignments oa
+        JOIN employees e ON oa.employee_id = e.id
+        JOIN units u ON oa.unit_id = u.id
+        ORDER BY oa.assignment_date DESC, oa.shift ASC
+        "#
+    )
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .into_iter()
+    .map(|r: sqlx::postgres::PgRow| {
+        use sqlx::Row;
+        OperatorAssignmentDetail {
+            id: r.get("id"),
+            employee_id: r.get("employee_id"),
+            employee_name: r.get("employee_name"),
+            unit_id: r.get("unit_id"),
+            cn_unit: r.get("cn_unit"),
+            assignment_date: r.get("assignment_date"),
+            shift: r.get("shift"),
+        }
+    })
+    .collect::<Vec<_>>();
+
+    Ok(Json(assignments))
+}
+
+pub async fn create_operator_assignment(
+    State(pool): State<PgPool>,
+    Json(input): Json<CreateOperatorAssignmentInput>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let parsed_date = NaiveDate::from_str(&input.assignment_date).map_err(|_| {
+        (StatusCode::BAD_REQUEST, "Invalid date format".to_string())
+    })?;
+
+    // 1. Check unit requirements
+    let unit_row = sqlx::query("SELECT licence FROM units WHERE id = $1")
+        .bind(input.unit_id)
+        .fetch_one(&pool)
+        .await
+        .map_err(|_| (StatusCode::NOT_FOUND, "Unit not found".to_string()))?;
+    
+    let unit_licence: Option<String> = unit_row.get(0);
+
+    // 2. Check operator qualifications
+    let op_row = sqlx::query("SELECT licence, position FROM employees WHERE id = $1")
+        .bind(input.employee_id)
+        .fetch_one(&pool)
+        .await
+        .map_err(|_| (StatusCode::NOT_FOUND, "Operator not found".to_string()))?;
+    
+    let held_licences: Vec<String> = op_row.get(0);
+    let position: Option<String> = op_row.get(1);
+
+    // Validation: License check
+    if let Some(req_lic) = unit_licence {
+        if !req_lic.is_empty() {
+            if !held_licences.contains(&req_lic) {
+                return Err((StatusCode::BAD_REQUEST, format!("Operator tidak memiliki license yang dibutuhkan: {}", req_lic)));
+            }
+        }
+    }
+
+    // Validation: Position check
+    if let Some(pos) = position {
+        if pos.to_lowercase() != "operator" {
+            // Optional: strict check
+        }
+    }
+
+    sqlx::query(
+        "INSERT INTO operator_assignments (employee_id, unit_id, assignment_date, shift) VALUES ($1, $2, $3, $4)"
+    )
+    .bind(input.employee_id)
+    .bind(input.unit_id)
+    .bind(parsed_date)
+    .bind(input.shift)
+    .execute(&pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Assignment creation error: {}", e);
+        (StatusCode::CONFLICT, "Assignment conflict or database error".to_string())
+    })?;
+
+    Ok(StatusCode::CREATED)
+}
+
+pub async fn delete_operator_assignment(
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    sqlx::query("DELETE FROM operator_assignments WHERE id = $1")
+        .bind(id)
+        .execute(&pool)
+        .await
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string()))?;
+    
+    Ok(StatusCode::NO_CONTENT)
+}
+
+pub async fn get_positions(
+    State(pool): State<PgPool>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let positions = sqlx::query_as::<_, Position>("SELECT * FROM positions ORDER BY name ASC")
+        .fetch_all(&pool)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(positions))
+}
+
+pub async fn create_position(
+    State(pool): State<PgPool>,
+    Json(input): Json<CreatePositionInput>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    sqlx::query("INSERT INTO positions (name) VALUES ($1)")
+        .bind(&input.name)
+        .execute(&pool)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(StatusCode::CREATED)
+}
+
+pub async fn delete_position(
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    sqlx::query("DELETE FROM positions WHERE id = $1")
+        .bind(id)
+        .execute(&pool)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+pub async fn get_licenses(
+    State(pool): State<PgPool>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let licenses = sqlx::query_as::<_, License>("SELECT * FROM licenses ORDER BY name ASC")
+        .fetch_all(&pool)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(licenses))
+}
+
+pub async fn create_license(
+    State(pool): State<PgPool>,
+    Json(input): Json<CreateLicenseInput>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    sqlx::query("INSERT INTO licenses (name, description) VALUES ($1, $2)")
+        .bind(&input.name)
+        .bind(&input.description)
+        .execute(&pool)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(StatusCode::CREATED)
+}
+
+pub async fn delete_license(
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    sqlx::query("DELETE FROM licenses WHERE id = $1")
+        .bind(id)
+        .execute(&pool)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(StatusCode::NO_CONTENT)
 }

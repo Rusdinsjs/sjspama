@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
 
-  let units: any[] = [];
+  let units = $state<any[]>([]);
+  let locations = $state<any[]>([]);
   let showStb = $state(false);
   let showBd = $state(false);
 
@@ -40,10 +41,13 @@
 
   onMount(async () => {
     try {
-      const res = await fetch('http://127.0.0.1:8081/api/units');
-      if (res.ok) units = await res.json();
+      const unitsRes = await fetch('http://127.0.0.1:8081/api/units');
+      if (unitsRes.ok) units = await unitsRes.json();
+      
+      const locationsRes = await fetch('http://127.0.0.1:8081/api/work-locations');
+      if (locationsRes.ok) locations = await locationsRes.json();
     } catch (e) {
-      console.error("Could not load units");
+      console.error("Could not load master data");
     }
   });
 
@@ -111,12 +115,12 @@
       <!-- Row 1: Time context -->
       <div class="lg:col-span-2 grid grid-cols-2 gap-6 p-6 bg-white/5 rounded-3xl border border-white/5">
         <div>
-          <label class="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 ml-1">Tanggal Kerja</label>
-          <input type="date" bind:value={form.date} class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-sky-500 transition-all" required>
+          <label for="work_date" class="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 ml-1">Tanggal Kerja</label>
+          <input id="work_date" type="date" bind:value={form.date} class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-sky-500 transition-all" required>
         </div>
         <div>
-          <label class="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 ml-1">Shift</label>
-          <select bind:value={form.shift} class="w-full bg-white/10 border border-white/10 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-sky-500 transition-all cursor-pointer">
+          <label for="work_shift" class="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 ml-1">Shift</label>
+          <select id="work_shift" bind:value={form.shift} class="w-full bg-white/10 border border-white/10 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-sky-500 transition-all cursor-pointer">
             <option value={1} class="bg-[#1e293b]">Shift 1 (Siang)</option>
             <option value={2} class="bg-[#1e293b]">Shift 2 (Malam)</option>
           </select>
@@ -124,8 +128,8 @@
       </div>
 
       <div class="p-6 bg-sky-500/5 rounded-3xl border border-sky-500/10 flex flex-col justify-center">
-        <label class="block text-[10px] font-black text-sky-400 uppercase tracking-[0.2em] mb-3 ml-1">Unit CN</label>
-        <select bind:value={form.unit_id} class="w-full bg-white/10 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold focus:outline-none focus:border-sky-500 transition-all cursor-pointer" required>
+        <label for="unit_id" class="block text-[10px] font-black text-sky-400 uppercase tracking-[0.2em] mb-3 ml-1">Unit CN</label>
+        <select id="unit_id" bind:value={form.unit_id} class="w-full bg-white/10 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold focus:outline-none focus:border-sky-500 transition-all cursor-pointer" required>
           <option value="" class="bg-[#1e293b]">-- Pilih Unit --</option>
           {#each units as unit}
             <option value={unit.id} class="bg-[#1e293b]">{unit.cn_unit} — {unit.model_unit}</option>
@@ -136,12 +140,17 @@
       <!-- Row 2: Personnel & Location -->
       <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8">
         <div>
-          <label class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3 ml-1">Nama Operator</label>
-          <input type="text" bind:value={form.operator_name} placeholder="Masukkan nama operator..." class="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-sky-500 transition-all" required>
+          <label for="operator_name" class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3 ml-1">Nama Operator</label>
+          <input id="operator_name" type="text" bind:value={form.operator_name} placeholder="Masukkan nama operator..." class="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-sky-500 transition-all" required>
         </div>
         <div>
-          <label class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3 ml-1">Lokasi Kerja</label>
-          <input type="text" bind:value={form.work_location} placeholder="Contoh: Disposal A, Pit North..." class="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-sky-500 transition-all" required>
+          <label for="work_location" class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3 ml-1">Lokasi Kerja</label>
+          <select id="work_location" bind:value={form.work_location} class="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-sky-500 transition-all cursor-pointer" required>
+            <option value="" class="bg-[#1e293b]">-- Pilih Lokasi --</option>
+            {#each locations as loc}
+              <option value={loc.name} class="bg-[#1e293b]">{loc.name}</option>
+            {/each}
+          </select>
         </div>
       </div>
 
@@ -149,16 +158,16 @@
       <div class="p-6 bg-white/5 rounded-3xl border border-white/5 flex flex-col space-y-4">
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="block text-[9px] font-black text-sky-500 uppercase mb-2">HM Start</label>
-            <input type="number" step="0.1" bind:value={form.hm_start} class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-sky-500" required>
+            <label for="hm_start" class="block text-[9px] font-black text-sky-500 uppercase mb-2">HM Start</label>
+            <input id="hm_start" type="number" step="0.1" bind:value={form.hm_start} class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-sky-500" required>
           </div>
           <div>
-            <label class="block text-[9px] font-black text-sky-500 uppercase mb-2">HM Stop</label>
-            <input type="number" step="0.1" bind:value={form.hm_stop} class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-sky-500" required>
+            <label for="hm_stop" class="block text-[9px] font-black text-sky-500 uppercase mb-2">HM Stop</label>
+            <input id="hm_stop" type="number" step="0.1" bind:value={form.hm_stop} class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-sky-500" required>
           </div>
         </div>
         <div class="pt-2">
-          <label class="block text-[9px] font-black text-slate-500 uppercase mb-2 ml-1">Total Penggunaan HM</label>
+          <p class="block text-[9px] font-black text-slate-500 uppercase mb-2 ml-1">Total Penggunaan HM</p>
           <div class="w-full bg-sky-500/10 border border-sky-500/30 rounded-2xl px-5 py-4 text-sky-400 font-black text-lg">
             {total_hm > 0 ? total_hm.toFixed(2) : '0.00'}
           </div>
@@ -170,8 +179,8 @@
     <div class="space-y-8">
       <div class="flex flex-wrap gap-4">
         <div class="w-full md:w-48">
-          <label class="block text-[10px] font-black text-blue-400 uppercase tracking-widest mb-3 ml-1">Working Hours (WH)</label>
-          <input type="number" step="0.1" bind:value={form.wh} class="w-full bg-white/10 border border-white/10 rounded-2xl px-6 py-4 text-white font-black text-xl focus:outline-none focus:border-blue-500 shadow-lg shadow-blue-500/5">
+          <label for="wh_hours" class="block text-[10px] font-black text-blue-400 uppercase tracking-widest mb-3 ml-1">Working Hours (WH)</label>
+          <input id="wh_hours" type="number" step="0.1" bind:value={form.wh} class="w-full bg-white/10 border border-white/10 rounded-2xl px-6 py-4 text-white font-black text-xl focus:outline-none focus:border-blue-500 shadow-lg shadow-blue-500/5">
         </div>
         
         <div class="flex-grow grid grid-cols-2 gap-4">
@@ -206,20 +215,20 @@
           </h4>
           <div class="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
             <div>
-              <label class="block text-[9px] font-bold text-slate-500 uppercase mb-2">STB Start</label>
-              <input type="number" step="0.1" bind:value={form.stb_start} class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-amber-500">
+              <label for="stb_start" class="block text-[9px] font-bold text-slate-500 uppercase mb-2">STB Start</label>
+              <input id="stb_start" type="number" step="0.1" bind:value={form.stb_start} class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-amber-500">
             </div>
             <div>
-              <label class="block text-[9px] font-bold text-slate-500 uppercase mb-2">STB Stop</label>
-              <input type="number" step="0.1" bind:value={form.stb_stop} class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-amber-500">
+              <label for="stb_stop" class="block text-[9px] font-bold text-slate-500 uppercase mb-2">STB Stop</label>
+              <input id="stb_stop" type="number" step="0.1" bind:value={form.stb_stop} class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-amber-500">
             </div>
             <div>
-              <label class="block text-[9px] font-bold text-amber-500 uppercase mb-2">Total STB</label>
-              <input type="number" step="0.1" bind:value={form.stb} class="w-full bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 text-amber-400 font-black">
+              <label for="stb_total" class="block text-[9px] font-bold text-amber-500 uppercase mb-2">Total STB</label>
+              <input id="stb_total" type="number" step="0.1" bind:value={form.stb} class="w-full bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 text-amber-400 font-black">
             </div>
             <div class="md:col-span-1">
-              <label class="block text-[9px] font-bold text-slate-500 uppercase mb-2">Keterangan STB</label>
-              <input type="text" bind:value={form.stb_remarks} placeholder="e.g. Hujan, No Operator..." class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-amber-500">
+              <label for="stb_remarks" class="block text-[9px] font-bold text-slate-500 uppercase mb-2">Keterangan STB</label>
+              <input id="stb_remarks" type="text" bind:value={form.stb_remarks} placeholder="e.g. Hujan, No Operator..." class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-amber-500">
             </div>
           </div>
         </div>
@@ -234,20 +243,20 @@
           
           <div class="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
             <div>
-              <label class="block text-[9px] font-bold text-slate-500 uppercase mb-2">BD Start</label>
-              <input type="number" step="0.1" bind:value={form.bd_start} class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-rose-500">
+              <label for="bd_start" class="block text-[9px] font-bold text-slate-500 uppercase mb-2">BD Start</label>
+              <input id="bd_start" type="number" step="0.1" bind:value={form.bd_start} class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-rose-500">
             </div>
             <div>
-              <label class="block text-[9px] font-bold text-slate-500 uppercase mb-2">BD Stop</label>
-              <input type="number" step="0.1" bind:value={form.bd_stop} class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-rose-500">
+              <label for="bd_stop" class="block text-[9px] font-bold text-slate-500 uppercase mb-2">BD Stop</label>
+              <input id="bd_stop" type="number" step="0.1" bind:value={form.bd_stop} class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-rose-500">
             </div>
             <div>
-              <label class="block text-[9px] font-bold text-rose-500 uppercase mb-2">Total BD</label>
-              <input type="number" step="0.1" bind:value={form.bd} class="w-full bg-rose-500/10 border border-rose-500/30 rounded-xl px-4 py-3 text-rose-400 font-black">
+              <label for="bd_total" class="block text-[9px] font-bold text-rose-500 uppercase mb-2">Total BD</label>
+              <input id="bd_total" type="number" step="0.1" bind:value={form.bd} class="w-full bg-rose-500/10 border border-rose-500/30 rounded-xl px-4 py-3 text-rose-400 font-black">
             </div>
             <div>
-              <label class="block text-[9px] font-bold text-slate-500 uppercase mb-2">Status Perbaikan</label>
-              <select bind:value={form.bd_status} class="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-rose-500 cursor-pointer">
+              <label for="bd_status" class="block text-[9px] font-bold text-slate-500 uppercase mb-2">Status Perbaikan</label>
+              <select id="bd_status" bind:value={form.bd_status} class="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-rose-500 cursor-pointer">
                 <option value="Done" class="bg-[#1e293b]">DONE (Selesai)</option>
                 <option value="Continue" class="bg-[#1e293b]">CONTINUE (Lanjut)</option>
               </select>
@@ -256,12 +265,12 @@
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
-              <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Keterangan Kerusakan</label>
-              <textarea bind:value={form.bd_remarks} rows="2" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white focus:border-rose-500 resize-none" placeholder="Jelaskan komponen yang rusak..."></textarea>
+              <label for="bd_remarks" class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Keterangan Kerusakan</label>
+              <textarea id="bd_remarks" bind:value={form.bd_remarks} rows="2" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white focus:border-rose-500 resize-none" placeholder="Jelaskan komponen yang rusak..."></textarea>
             </div>
             <div>
-              <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Deskripsi Pekerjaan (Desc Job)</label>
-              <textarea bind:value={form.bd_job_desc} rows="2" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white focus:border-rose-500 resize-none" placeholder="Tindakan perbaikan yang dilakukan..."></textarea>
+              <label for="bd_job_desc" class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Deskripsi Pekerjaan (Desc Job)</label>
+              <textarea id="bd_job_desc" bind:value={form.bd_job_desc} rows="2" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white focus:border-rose-500 resize-none" placeholder="Tindakan perbaikan yang dilakukan..."></textarea>
             </div>
           </div>
         </div>
@@ -270,8 +279,8 @@
 
     <!-- General Remarks -->
     <div class="pt-4 border-t border-white/5">
-      <label class="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 ml-1">Catatan Tambahan (General Remarks)</label>
-      <textarea bind:value={form.remarks} rows="2" class="w-full bg-white/5 border border-white/10 rounded-3xl px-6 py-5 text-white focus:outline-none focus:border-sky-500 transition-all resize-none" placeholder="Tambahkan konteks teknis lainnya jika diperlukan..."></textarea>
+      <label for="general_remarks" class="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 ml-1">Catatan Tambahan (General Remarks)</label>
+      <textarea id="general_remarks" bind:value={form.remarks} rows="2" class="w-full bg-white/5 border border-white/10 rounded-3xl px-6 py-5 text-white focus:outline-none focus:border-sky-500 transition-all resize-none" placeholder="Tambahkan konteks teknis lainnya jika diperlukan..."></textarea>
     </div>
 
     <div class="flex justify-end pt-4">

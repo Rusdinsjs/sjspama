@@ -11,6 +11,7 @@
   let sidebarOpen = $state(false);
   let isLight = $state(false);
   let user = $state<{name: string, role: string} | null>(null);
+  let masterOpen = $state(false);
 
   function toggleSidebar() {
     sidebarOpen = !sidebarOpen;
@@ -89,40 +90,84 @@
       </div>
       
       <nav class="space-y-2">
-        <a href="/" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-white font-medium transition-all duration-300 ${page.url.pathname === '/' ? 'bg-white/10 shadow-[0_0_15px_rgba(14,165,233,0.2)]' : 'text-slate-300 hover:bg-white/10 hover:text-white'}">
+        <a href="/" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-white font-medium transition-all duration-300 {page.url.pathname === '/' ? 'bg-white/10 shadow-[0_0_15px_rgba(14,165,233,0.2)]' : 'text-slate-300 hover:bg-white/10 hover:text-white'}">
           <!-- Icon -->
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ${page.url.pathname === '/' ? 'text-sky-400' : ''}" viewBox="0 0 20 20" fill="currentColor">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 {page.url.pathname === '/' ? 'text-sky-400' : ''}" viewBox="0 0 20 20" fill="currentColor">
             <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
           </svg>
           <span>Dashboard</span>
         </a>
-        <a href="/input" class="flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 ${page.url.pathname === '/input' ? 'bg-white/10 text-white shadow-[0_0_15px_rgba(14,165,233,0.2)]' : 'text-slate-300 hover:bg-white/10 hover:text-white'}">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ${page.url.pathname === '/input' ? 'text-sky-400' : ''}" viewBox="0 0 20 20" fill="currentColor">
+        <a href="/input" class="flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 {page.url.pathname === '/input' ? 'bg-white/10 text-white shadow-[0_0_15px_rgba(14,165,233,0.2)]' : 'text-slate-300 hover:bg-white/10 hover:text-white'}">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 {page.url.pathname === '/input' ? 'text-sky-400' : ''}" viewBox="0 0 20 20" fill="currentColor">
             <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
             <path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" />
           </svg>
           <span>Daily Input</span>
         </a>
-        <a href="/reports" class="flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 ${page.url.pathname === '/reports' ? 'bg-white/10 text-white shadow-[0_0_15px_rgba(14,165,233,0.2)]' : 'text-slate-300 hover:bg-white/10 hover:text-white'}">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ${page.url.pathname === '/reports' ? 'text-sky-400' : ''}" viewBox="0 0 20 20" fill="currentColor">
+        <a href="/reports" class="flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 {page.url.pathname === '/reports' ? 'bg-white/10 text-white shadow-[0_0_15px_rgba(14,165,233,0.2)]' : 'text-slate-300 hover:bg-white/10 hover:text-white'}">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 {page.url.pathname === '/reports' ? 'text-sky-400' : ''}" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 0l-2 2a1 1 0 101.414 1.414L8 10.414l1.293 1.293a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
           </svg>
           <span>Reports</span>
         </a>
-        <a href="/units" class="flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 ${page.url.pathname === '/units' ? 'bg-white/10 text-white shadow-[0_0_15px_rgba(14,165,233,0.2)]' : 'text-slate-300 hover:bg-white/10 hover:text-white'}">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ${page.url.pathname === '/units' ? 'text-sky-400' : ''}" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
+        <!-- Master Data Group -->
+        <div class="space-y-1">
+          <button 
+            onclick={() => masterOpen = !masterOpen}
+            class="w-full flex items-center justify-between px-4 py-3 rounded-xl font-medium transition-all duration-300 {['/employees', '/positions', '/licenses', '/units', '/locations'].includes(page.url.pathname) ? 'bg-white/5 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white'}"
+          >
+            <div class="flex items-center space-x-3">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 {['/employees', '/positions', '/licenses', '/units', '/locations'].includes(page.url.pathname) ? 'text-sky-400' : ''}" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
+              </svg>
+              <span>Master Data</span>
+            </div>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transition-transform duration-300 {masterOpen ? 'rotate-180' : ''}" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+          </button>
+          
+          {#if masterOpen || ['/employees', '/positions', '/licenses', '/units', '/locations'].includes(page.url.pathname)}
+            <div class="pl-4 space-y-1 mt-1 animate-in slide-in-from-top-2 duration-200">
+              <a href="/employees" class="flex items-center space-x-3 px-4 py-2 rounded-lg text-sm transition-all {page.url.pathname === '/employees' ? 'text-sky-400 font-bold' : 'text-slate-400 hover:text-white'}">
+                <div class="w-1.5 h-1.5 rounded-full {page.url.pathname === '/employees' ? 'bg-sky-400' : 'bg-slate-600'}"></div>
+                <span>Karyawan</span>
+              </a>
+              <a href="/positions" class="flex items-center space-x-3 px-4 py-2 rounded-lg text-sm transition-all {page.url.pathname === '/positions' ? 'text-sky-400 font-bold' : 'text-slate-400 hover:text-white'}">
+                <div class="w-1.5 h-1.5 rounded-full {page.url.pathname === '/positions' ? 'bg-sky-400' : 'bg-slate-600'}"></div>
+                <span>Jabatan</span>
+              </a>
+              <a href="/licenses" class="flex items-center space-x-3 px-4 py-2 rounded-lg text-sm transition-all {page.url.pathname === '/licenses' ? 'text-sky-400 font-bold' : 'text-slate-400 hover:text-white'}">
+                <div class="w-1.5 h-1.5 rounded-full {page.url.pathname === '/licenses' ? 'bg-sky-400' : 'bg-slate-600'}"></div>
+                <span>License</span>
+              </a>
+              <a href="/units" class="flex items-center space-x-3 px-4 py-2 rounded-lg text-sm transition-all {page.url.pathname === '/units' ? 'text-sky-400 font-bold' : 'text-slate-400 hover:text-white'}">
+                <div class="w-1.5 h-1.5 rounded-full {page.url.pathname === '/units' ? 'bg-sky-400' : 'bg-slate-600'}"></div>
+                <span>Alat</span>
+              </a>
+              <a href="/locations" class="flex items-center space-x-3 px-4 py-2 rounded-lg text-sm transition-all {page.url.pathname === '/locations' ? 'text-sky-400 font-bold' : 'text-slate-400 hover:text-white'}">
+                <div class="w-1.5 h-1.5 rounded-full {page.url.pathname === '/locations' ? 'bg-sky-400' : 'bg-slate-600'}"></div>
+                <span>Lokasi</span>
+              </a>
+            </div>
+          {/if}
+        </div>
+
+        <a href="/assignments" class="flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 {page.url.pathname === '/assignments' ? 'bg-white/10 text-white shadow-[0_0_15px_rgba(14,165,233,0.2)]' : 'text-slate-300 hover:bg-white/10 hover:text-white'}">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 {page.url.pathname === '/assignments' ? 'text-sky-400' : ''}" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z" />
           </svg>
-          <span>Master Data Alat</span>
+          <span>Pairing Operator</span>
         </a>
-        <a href="/employees" class="flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 ${page.url.pathname === '/employees' ? 'bg-white/10 text-white shadow-[0_0_15px_rgba(14,165,233,0.2)]' : 'text-slate-300 hover:bg-white/10 hover:text-white'}">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ${page.url.pathname === '/employees' ? 'text-sky-400' : ''}" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3z" />
+
+        <a href="/profile" class="flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 {page.url.pathname === '/profile' ? 'bg-white/10 text-white shadow-[0_0_15px_rgba(14,165,233,0.2)]' : 'text-slate-300 hover:bg-white/10 hover:text-white'}">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 {page.url.pathname === '/profile' ? 'text-sky-400' : ''}" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
           </svg>
-          <span>Master Karyawan</span>
+          <span>Profile</span>
         </a>
-        <a href="/users" class="flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 ${page.url.pathname === '/users' ? 'bg-white/10 text-white shadow-[0_0_15px_rgba(14,165,233,0.2)]' : 'text-slate-300 hover:bg-white/10 hover:text-white'}">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ${page.url.pathname === '/users' ? 'text-sky-400' : ''}" viewBox="0 0 20 20" fill="currentColor">
+        <a href="/users" class="flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 {page.url.pathname === '/users' ? 'bg-white/10 text-white shadow-[0_0_15px_rgba(14,165,233,0.2)]' : 'text-slate-300 hover:bg-white/10 hover:text-white'}">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 {page.url.pathname === '/users' ? 'text-sky-400' : ''}" viewBox="0 0 20 20" fill="currentColor">
             <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
           </svg>
           <span>Users</span>

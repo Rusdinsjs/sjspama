@@ -15,6 +15,7 @@ pub struct Unit {
     pub ct_expired: Option<NaiveDate>,
     pub bast_number: Option<String>,
     pub skbp_pajak: Option<String>,
+    pub licence: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, FromRow)]
@@ -45,6 +46,9 @@ pub struct Employee {
     pub phone_number: Option<String>,
     pub simper_number: Option<String>,
     pub simper_expiry: Option<NaiveDate>,
+    pub batch_number: Option<String>,
+    pub licence: Option<Vec<String>>,
+    pub photo_url: Option<String>,
     pub created_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
@@ -75,6 +79,9 @@ pub struct CreateEmployeeInput {
     pub phone_number: Option<String>,
     pub simper_number: Option<String>,
     pub simper_expiry: Option<String>,
+    pub batch_number: Option<String>,
+    pub licence: Option<Vec<String>>,
+    pub photo_url: Option<Option<String>>,
 }
 
 #[derive(Serialize, Deserialize, FromRow)]
@@ -156,4 +163,80 @@ pub struct CreateUnitInput {
     pub ct_expired: Option<String>,
     pub bast_number: Option<String>,
     pub skbp_pajak: Option<String>,
+    pub licence: Option<String>,
+}
+#[derive(Deserialize)]
+pub struct UpdateProfileInput {
+    pub name: Option<String>,
+    pub email: String,
+    pub password: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, FromRow, Debug, Clone)]
+pub struct WorkLocation {
+    pub id: Uuid,
+    pub name: String,
+    pub description: Option<String>,
+    pub created_at: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+#[derive(Deserialize)]
+pub struct CreateWorkLocationInput {
+    pub name: String,
+    pub description: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, FromRow, Debug, Clone)]
+pub struct OperatorAssignment {
+    pub id: Uuid,
+    pub employee_id: Uuid,
+    pub unit_id: Uuid,
+    pub assignment_date: NaiveDate,
+    pub shift: i16,
+    pub created_at: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+#[derive(Deserialize)]
+pub struct CreateOperatorAssignmentInput {
+    pub employee_id: Uuid,
+    pub unit_id: Uuid,
+    pub assignment_date: String,
+    pub shift: i16,
+}
+
+#[derive(Serialize)]
+pub struct OperatorAssignmentDetail {
+    pub id: Uuid,
+    pub employee_id: Uuid,
+    pub employee_name: String,
+    pub unit_id: Uuid,
+    pub cn_unit: String,
+    pub assignment_date: NaiveDate,
+    pub shift: i16,
+}
+
+#[derive(Serialize, Deserialize, FromRow, Clone, Debug)]
+pub struct Position {
+    pub id: Uuid,
+    pub name: String,
+    pub created_at: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+#[derive(Deserialize)]
+pub struct CreatePositionInput {
+    pub name: String,
+}
+
+#[derive(Serialize, Deserialize, FromRow, Clone, Debug)]
+pub struct License {
+    pub id: Uuid,
+    pub name: String,
+    pub description: Option<String>,
+    pub created_at: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+#[derive(Deserialize)]
+pub struct CreateLicenseInput {
+    pub name: String,
+    pub description: Option<String>,
 }

@@ -45,16 +45,16 @@ async fn main() {
             .unwrap()
             .to_string();
 
-        sqlx::query!(
+        sqlx::query(
             "INSERT INTO users (name, email, password_hash, role) 
              VALUES ($1, $2, $3, $4)
              ON CONFLICT (email) DO UPDATE 
-             SET password_hash = EXCLUDED.password_hash",
-            "System Admin",
-            "admin@sjs.id",
-            password_hash,
-            "ADMIN"
+             SET password_hash = EXCLUDED.password_hash"
         )
+        .bind("System Admin")
+        .bind("admin@sjs.id")
+        .bind(password_hash)
+        .bind("ADMIN")
         .execute(&pool)
         .await
         .unwrap();
@@ -77,6 +77,15 @@ async fn main() {
         .route("/api/auth/login", post(handlers::login))
         .route("/api/users", get(handlers::get_all_users).post(handlers::register_user))
         .route("/api/users/:id", delete(handlers::delete_user))
+        .route("/api/users/:id/profile", axum::routing::put(handlers::update_profile))
+        .route("/api/work-locations", get(handlers::get_work_locations).post(handlers::create_work_location))
+        .route("/api/work-locations/:id", delete(handlers::delete_work_location).put(handlers::update_work_location))
+        .route("/api/assignments", get(handlers::get_operator_assignments).post(handlers::create_operator_assignment))
+        .route("/api/assignments/:id", delete(handlers::delete_operator_assignment))
+        .route("/api/positions", get(handlers::get_positions).post(handlers::create_position))
+        .route("/api/positions/:id", delete(handlers::delete_position))
+        .route("/api/licenses", get(handlers::get_licenses).post(handlers::create_license))
+        .route("/api/licenses/:id", delete(handlers::delete_license))
         .layer(tower_http::trace::TraceLayer::new_for_http())
         .layer(cors)
         .with_state(pool);
