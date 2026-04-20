@@ -107,6 +107,14 @@ pub struct CreateUserInput {
     pub role: String,
 }
 
+#[derive(Deserialize)]
+pub struct UpdateUserInput {
+    pub name: String,
+    pub email: String,
+    pub password: Option<String>,
+    pub role: String,
+}
+
 #[derive(Serialize)]
 pub struct AuthResponse {
     pub token: String,

@@ -26,6 +26,62 @@
   let modalMode = $state<'create' | 'edit' | 'view'>('create');
   let selectedUnitId = $state<string | null>(null);
   let unitToIdDelete = $state<string | null>(null);
+
+  // Filtering and Sorting State
+  let searchTerm = $state('');
+  let filterType = $state('');
+  let filterStatus = $state('');
+  let sortBy = $state('cn_unit');
+  let sortOrder = $state<'asc' | 'desc'>('asc');
+
+  // Derived filtered and sorted units
+  let filteredUnits = $derived.by(() => {
+    let result = [...units];
+
+    // Search
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(u => 
+        u.cn_unit?.toLowerCase().includes(term) || 
+        u.model_unit?.toLowerCase().includes(term) ||
+        u.hull_number?.toLowerCase().includes(term)
+      );
+    }
+
+    // Filter by Type
+    if (filterType) {
+      result = result.filter(u => u.type_unit === filterType);
+    }
+
+    // Filter by Status
+    if (filterStatus) {
+      result = result.filter(u => u.status === filterStatus);
+    }
+
+    // Sort
+    result.sort((a: any, b: any) => {
+      let valA = a[sortBy] || '';
+      let valB = b[sortBy] || '';
+      
+      if (typeof valA === 'string') valA = valA.toLowerCase();
+      if (typeof valB === 'string') valB = valB.toLowerCase();
+
+      if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+      if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return result;
+  });
+
+  function toggleSort(field: string) {
+    if (sortBy === field) {
+      sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+    } else {
+      sortBy = field;
+      sortOrder = 'asc';
+    }
+  }
   
   let unitForm = $state({
     cn_unit: '',
@@ -182,25 +238,60 @@
     <h2 class="text-3xl font-black text-white tracking-tight">Master Data Alat</h2>
     <p class="text-slate-400 mt-1">Kelola seluruh armada alat berat SJS-PAMA</p>
   </div>
-  <button 
-    onclick={openCreate}
-    class="px-6 py-3 bg-sky-500 text-white rounded-xl font-bold hover:bg-sky-400 transition-all shadow-lg shadow-sky-500/20 flex items-center space-x-2"
-  >
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-      <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-    </svg>
-    <span>Tambah Alat</span>
-  </button>
-</div>
+    <button 
+      onclick={openCreate}
+      class="px-6 py-3 bg-sky-500 text-white rounded-xl font-bold hover:bg-sky-400 transition-all shadow-lg shadow-sky-500/20 flex items-center space-x-2"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+      </svg>
+      <span>Tambah Alat</span>
+    </button>
+  </div>
+
+  <!-- Filter and Search Bar -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 p-6 glass rounded-2xl border border-white/10 shadow-xl">
+    <div class="col-span-1 md:col-span-2 relative">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+      <input 
+        type="text" 
+        bind:value={searchTerm} 
+        placeholder="Cari Unit CN, Model, atau Lambung..." 
+        class="w-full bg-slate-900/50 border border-white/5 rounded-xl pl-12 pr-4 py-3 text-white focus:outline-none focus:border-sky-500/50 transition-all placeholder:text-slate-600 text-sm"
+      >
+    </div>
+    
+    <select bind:value={filterType} class="bg-slate-900/50 border border-white/5 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-sky-500/50 text-sm appearance-none">
+      <option value="">Semua Tipe</option>
+      {#each [...new Set(units.map(u => u.type_unit))] as type}
+        <option value={type}>{type}</option>
+      {/each}
+    </select>
+
+    <select bind:value={filterStatus} class="bg-slate-900/50 border border-white/5 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-sky-500/50 text-sm appearance-none">
+      <option value="">Semua Status</option>
+      <option value="Utama">Utama</option>
+      <option value="Cadangan">Cadangan</option>
+      <option value="Maintenance">Maintenance</option>
+    </select>
+  </div>
 
 <div class="glass rounded-2xl overflow-hidden border border-[#ffffff10] shadow-2xl">
   <table class="w-full text-left border-collapse">
     <thead>
       <tr class="bg-white/5 border-b border-white/10 uppercase text-[10px] font-black tracking-[0.2em] text-slate-400">
-        <th class="px-6 py-5">Unit CN</th>
-        <th class="px-6 py-5">Type / Model</th>
+        <th class="px-6 py-5 cursor-pointer hover:text-white" onclick={() => toggleSort('cn_unit')}>
+          Unit CN {sortBy === 'cn_unit' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+        </th>
+        <th class="px-6 py-5 cursor-pointer hover:text-white" onclick={() => toggleSort('type_unit')}>
+          Type / Model {sortBy === 'type_unit' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+        </th>
         <th class="px-6 py-5">Required License</th>
-        <th class="px-6 py-5">Status</th>
+        <th class="px-6 py-5 cursor-pointer hover:text-white" onclick={() => toggleSort('status')}>
+          Status {sortBy === 'status' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+        </th>
         <th class="px-6 py-5 text-right">Actions</th>
       </tr>
     </thead>
@@ -214,7 +305,7 @@
           <td colspan="4" class="px-6 py-12 text-center text-slate-500 italic">No units found in database.</td>
         </tr>
       {:else}
-        {#each units as unit}
+        {#each filteredUnits as unit}
           <tr class="hover:bg-white/5 transition-colors group">
             <td class="px-6 py-4">
               <span class="text-white font-bold tracking-wider">{unit.cn_unit}</span>

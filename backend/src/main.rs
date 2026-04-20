@@ -76,7 +76,7 @@ async fn main() {
         .route("/api/employees/:id", delete(handlers::delete_employee).put(handlers::update_employee))
         .route("/api/auth/login", post(handlers::login))
         .route("/api/users", get(handlers::get_all_users).post(handlers::register_user))
-        .route("/api/users/:id", delete(handlers::delete_user))
+        .route("/api/users/:id", delete(handlers::delete_user).put(handlers::update_user))
         .route("/api/users/:id/profile", axum::routing::put(handlers::update_profile))
         .route("/api/work-locations", get(handlers::get_work_locations).post(handlers::create_work_location))
         .route("/api/work-locations/:id", delete(handlers::delete_work_location).put(handlers::update_work_location))

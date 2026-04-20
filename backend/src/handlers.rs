@@ -20,7 +20,7 @@ use crate::models::{
     AuthResponse, CreateDailyLogInput, CreateEmployeeInput, CreateLicenseInput,
     CreateOperatorAssignmentInput, CreatePositionInput, CreateUnitInput, CreateUserInput,
     CreateWorkLocationInput, Employee, License, LoginInput, OperatorAssignmentDetail, Position,
-    Unit, UpdateProfileInput, User, WorkLocation,
+    Unit, UpdateProfileInput, UpdateUserInput, User, WorkLocation,
 };
 
 pub async fn get_employees(
@@ -468,6 +468,58 @@ pub async fn register_user(
         })?;
 
     Ok(StatusCode::CREATED)
+}
+
+pub async fn update_user(
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+    Json(input): Json<UpdateUserInput>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    if let Some(password) = input.password {
+        if !password.is_empty() {
+            let salt = SaltString::generate(&mut OsRng);
+            let argon2 = Argon2::default();
+            let password_hash = argon2
+                .hash_password(password.as_bytes(), &salt)
+                .map_err(|_| {
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        "Encoding error".to_string(),
+                    )
+                })?
+                .to_string();
+
+            sqlx::query("UPDATE users SET name = $1, email = $2, password_hash = $3, role = $4 WHERE id = $5")
+                .bind(&input.name)
+                .bind(&input.email)
+                .bind(&password_hash)
+                .bind(&input.role)
+                .bind(id)
+                .execute(&pool)
+                .await
+                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        } else {
+            sqlx::query("UPDATE users SET name = $1, email = $2, role = $3 WHERE id = $4")
+                .bind(&input.name)
+                .bind(&input.email)
+                .bind(&input.role)
+                .bind(id)
+                .execute(&pool)
+                .await
+                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        }
+    } else {
+        sqlx::query("UPDATE users SET name = $1, email = $2, role = $3 WHERE id = $4")
+            .bind(&input.name)
+            .bind(&input.email)
+            .bind(&input.role)
+            .bind(id)
+            .execute(&pool)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    }
+
+    Ok(StatusCode::OK)
 }
 
 pub async fn delete_user(

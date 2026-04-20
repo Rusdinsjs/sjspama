@@ -12,6 +12,62 @@
   let positions = $state<any[]>([]);
   let licenses = $state<any[]>([]);
 
+  // Filtering and Sorting State
+  let searchTerm = $state('');
+  let filterPosition = $state('');
+  let filterStatus = $state('');
+  let sortBy = $state('name');
+  let sortOrder = $state<'asc' | 'desc'>('asc');
+
+  // Derived filtered and sorted employees
+  let filteredEmployees = $derived.by(() => {
+    let result = [...employees];
+
+    // Search
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(emp => 
+        emp.name?.toLowerCase().includes(term) || 
+        emp.nik?.toLowerCase().includes(term) ||
+        emp.email?.toLowerCase().includes(term)
+      );
+    }
+
+    // Filter by Position
+    if (filterPosition) {
+      result = result.filter(emp => emp.position === filterPosition);
+    }
+
+    // Filter by Status
+    if (filterStatus) {
+      result = result.filter(emp => emp.status === filterStatus);
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      let valA = a[sortBy] || '';
+      let valB = b[sortBy] || '';
+      
+      if (typeof valA === 'string') valA = valA.toLowerCase();
+      if (typeof valB === 'string') valB = valB.toLowerCase();
+
+      if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+      if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return result;
+  });
+
+  function toggleSort(field: string) {
+    if (sortBy === field) {
+      sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+    } else {
+      sortBy = field;
+      sortOrder = 'asc';
+    }
+  }
+
   let form = $state({
     nik: '',
     name: '',
@@ -179,22 +235,58 @@
     </button>
   </div>
 
+  <!-- Filter and Search Bar -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 p-6 glass rounded-3xl border border-white/10 shadow-xl">
+    <div class="col-span-1 md:col-span-2 relative">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+      <input 
+        type="text" 
+        bind:value={searchTerm} 
+        placeholder="Cari NAMA, NIK atau EMAIL..." 
+        class="w-full bg-slate-900/50 border border-white/5 rounded-2xl pl-12 pr-4 py-4 text-white focus:outline-none focus:border-sky-500/50 transition-all placeholder:text-slate-600 text-sm"
+      >
+    </div>
+    
+    <select bind:value={filterPosition} class="bg-slate-900/50 border border-white/5 rounded-2xl px-4 py-4 text-white focus:outline-none focus:border-sky-500/50 text-sm appearance-none">
+      <option value="">Semua Jabatan</option>
+      {#each positions as pos}
+        <option value={pos.name}>{pos.name}</option>
+      {/each}
+    </select>
+
+    <select bind:value={filterStatus} class="bg-slate-900/50 border border-white/5 rounded-2xl px-4 py-4 text-white focus:outline-none focus:border-sky-500/50 text-sm appearance-none">
+      <option value="">Semua Status</option>
+      <option value="Active">Active</option>
+      <option value="Inactive">Inactive</option>
+    </select>
+  </div>
+
   <div class="glass rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl">
     <table class="w-full text-left">
       <thead>
         <tr class="bg-white/5 border-b border-white/10">
           <th class="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Profile</th>
-          <th class="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">NIK</th>
-          <th class="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nama Lengkap</th>
-          <th class="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Jabatan</th>
+          <th class="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-white" onclick={() => toggleSort('nik')}>
+            NIK {sortBy === 'nik' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+          </th>
+          <th class="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-white" onclick={() => toggleSort('name')}>
+            Nama Lengkap {sortBy === 'name' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+          </th>
+          <th class="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-white" onclick={() => toggleSort('position')}>
+            Jabatan {sortBy === 'position' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+          </th>
           <th class="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Dept</th>
-          <th class="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Company</th>
+          <th class="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-white" onclick={() => toggleSort('company')}>
+            Company {sortBy === 'company' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+          </th>
           <th class="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
           <th class="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Aksi</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-white/5">
-        {#each employees as emp}
+        {#each filteredEmployees as emp}
           <tr class="hover:bg-white/5 transition-colors group">
             <td class="px-8 py-4">
               <div class="w-10 h-10 rounded-xl bg-slate-800 border border-white/10 overflow-hidden flex items-center justify-center">

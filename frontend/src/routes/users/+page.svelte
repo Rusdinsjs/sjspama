@@ -3,6 +3,7 @@
 
   let users = $state<any[]>([]);
   let showCreateModal = $state(false);
+  let showEditModal = $state(false);
   let loading = $state(false);
 
   let newUser = $state({
@@ -11,6 +12,8 @@
     password: '',
     role: 'OPERATOR'
   });
+
+  let editingUser = $state<any>(null);
 
   async function fetchUsers() {
     try {
@@ -32,6 +35,31 @@
       if (res.ok) {
         showCreateModal = false;
         newUser = { name: '', email: '', password: '', role: 'OPERATOR' };
+        fetchUsers();
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      loading = false;
+    }
+  }
+
+  async function updateUser() {
+    loading = true;
+    try {
+      const res = await fetch(`http://127.0.0.1:8081/api/users/${editingUser.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editingUser.name,
+          email: editingUser.email,
+          password: editingUser.password, // Optional in backend
+          role: editingUser.role
+        })
+      });
+      if (res.ok) {
+        showEditModal = false;
+        editingUser = null;
         fetchUsers();
       }
     } catch (e) {
@@ -108,7 +136,16 @@
                 {user.role}
               </span>
             </td>
-            <td class="px-6 py-4 text-right">
+            <td class="px-6 py-4 text-right space-x-2">
+              <button 
+                onclick={() => {
+                  editingUser = { ...user, password: '' };
+                  showEditModal = true;
+                }}
+                class="text-sky-500 hover:text-sky-400 font-bold transition-colors p-2 hover:bg-sky-500/10 rounded-lg"
+              >
+                Edit
+              </button>
               <button 
                 onclick={() => deleteUser(user.id)}
                 aria-label={`Delete user ${user.name}`}
@@ -171,6 +208,56 @@
           class="w-full bg-sky-500 text-white font-bold py-4 rounded-2xl mt-4 hover:bg-sky-400 transition-all shadow-lg shadow-sky-500/20"
         >
           {loading ? 'Processing...' : 'Add User Account'}
+        </button>
+      </form>
+    </div>
+  </div>
+{/if}
+
+{#if showEditModal}
+  <div class="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+    <div class="w-full max-w-lg glass p-8 rounded-3xl border border-white/10 shadow-2xl relative">
+      <button 
+        onclick={() => { showEditModal = false; editingUser = null; }}
+        aria-label="Close modal"
+        class="absolute top-6 right-6 text-slate-400 hover:text-white transition-colors"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+
+      <h3 class="text-2xl font-black text-white mb-6">Edit User</h3>
+      
+      <form onsubmit={(e) => { e.preventDefault(); updateUser(); }} class="space-y-4">
+        <div>
+          <label for="edit-fullname" class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Full Name</label>
+          <input id="edit-fullname" type="text" bind:value={editingUser.name} class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white focus:outline-none focus:border-sky-500" required>
+        </div>
+        <div>
+          <label for="edit-email" class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Email</label>
+          <input id="edit-email" type="email" bind:value={editingUser.email} class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white focus:outline-none focus:border-sky-500" required>
+        </div>
+        <div>
+          <label for="edit-password" class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Password (Leave blank to keep current)</label>
+          <input id="edit-password" type="password" bind:value={editingUser.password} class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white focus:outline-none focus:border-sky-500">
+        </div>
+        <div>
+          <label for="edit-role" class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Assign Role</label>
+          <select id="edit-role" bind:value={editingUser.role} class="w-full bg-[#1e293b] border border-white/10 rounded-2xl px-5 py-3 text-white focus:outline-none focus:border-sky-500">
+            <option value="OPERATOR">Operator</option>
+            <option value="SUPERVISOR">Supervisor</option>
+            <option value="ADMIN">Administrator</option>
+            <option value="CHECKER">Admin Checker</option>
+          </select>
+        </div>
+
+        <button 
+          type="submit" 
+          disabled={loading}
+          class="w-full bg-sky-500 text-white font-bold py-4 rounded-2xl mt-4 hover:bg-sky-400 transition-all shadow-lg shadow-sky-500/20"
+        >
+          {loading ? 'Processing...' : 'Update User Account'}
         </button>
       </form>
     </div>
