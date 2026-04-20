@@ -1,21 +1,26 @@
-use axum::{extract::{State, Path}, http::StatusCode, response::IntoResponse, Json};
-use sqlx::{PgPool, Row};
+use argon2::{
+    Argon2, PasswordHash, PasswordVerifier,
+    password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
+};
+use axum::{
+    Json,
+    extract::{Path, State},
+    http::StatusCode,
+    response::IntoResponse,
+};
 use chrono::NaiveDate;
+use jsonwebtoken::{EncodingKey, Header, encode};
+use serde::{Deserialize, Serialize};
 use serde_json::json;
+use sqlx::{PgPool, Row};
 use std::str::FromStr;
 use uuid::Uuid;
-use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
-    Argon2, PasswordHash, PasswordVerifier,
-};
-use jsonwebtoken::{encode, Header, EncodingKey};
-use serde::{Deserialize, Serialize};
 
 use crate::models::{
-    CreateDailyLogInput, Unit, User, LoginInput, CreateUserInput, 
-    AuthResponse, CreateUnitInput, Employee, CreateEmployeeInput, UpdateProfileInput,
-    WorkLocation, CreateWorkLocationInput, OperatorAssignment, CreateOperatorAssignmentInput, OperatorAssignmentDetail,
-    Position, CreatePositionInput, License, CreateLicenseInput
+    AuthResponse, CreateDailyLogInput, CreateEmployeeInput, CreateLicenseInput,
+    CreateOperatorAssignmentInput, CreatePositionInput, CreateUnitInput, CreateUserInput,
+    CreateWorkLocationInput, Employee, License, LoginInput, OperatorAssignmentDetail, Position,
+    Unit, UpdateProfileInput, User, WorkLocation,
 };
 
 pub async fn get_employees(
@@ -42,9 +47,18 @@ pub async fn register_employee(
     State(pool): State<PgPool>,
     Json(input): Json<CreateEmployeeInput>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let join_date = input.join_date.as_ref().and_then(|d| d.parse::<NaiveDate>().ok());
-    let birth_date = input.birth_date.as_ref().and_then(|d| d.parse::<NaiveDate>().ok());
-    let simper_expiry = input.simper_expiry.as_ref().and_then(|d| d.parse::<NaiveDate>().ok());
+    let join_date = input
+        .join_date
+        .as_ref()
+        .and_then(|d| d.parse::<NaiveDate>().ok());
+    let birth_date = input
+        .birth_date
+        .as_ref()
+        .and_then(|d| d.parse::<NaiveDate>().ok());
+    let simper_expiry = input
+        .simper_expiry
+        .as_ref()
+        .and_then(|d| d.parse::<NaiveDate>().ok());
 
     sqlx::query(
         "INSERT INTO employees (
@@ -128,15 +142,15 @@ pub async fn update_employee(
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
     let join_date = match input.join_date {
         Some(ref d) if !d.is_empty() => NaiveDate::from_str(d).ok(),
-        _ => None
+        _ => None,
     };
     let birth_date = match input.birth_date {
         Some(ref d) if !d.is_empty() => NaiveDate::from_str(d).ok(),
-        _ => None
+        _ => None,
     };
     let simper_expiry = match input.simper_expiry {
         Some(ref d) if !d.is_empty() => NaiveDate::from_str(d).ok(),
-        _ => None
+        _ => None,
     };
 
     sqlx::query(
@@ -203,7 +217,7 @@ pub async fn register_unit(
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
     let ct_expired = match input.ct_expired {
         Some(ref d) if !d.is_empty() => NaiveDate::from_str(d).ok(),
-        _ => None
+        _ => None,
     };
 
     sqlx::query(
@@ -238,8 +252,13 @@ pub async fn delete_unit(
         .bind(id)
         .execute(&pool)
         .await
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string()))?;
-    
+        .map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Database error".to_string(),
+            )
+        })?;
+
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -273,11 +292,17 @@ pub async fn create_daily_log(
     let mohh = 12.0;
 
     if input.wh + input.stb + input.bd > mohh {
-        return Err((StatusCode::BAD_REQUEST, "Total of WH + STB + BD cannot exceed MOHH".to_string()));
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "Total of WH + STB + BD cannot exceed MOHH".to_string(),
+        ));
     }
 
     let parsed_date = NaiveDate::from_str(&input.date).map_err(|_| {
-        (StatusCode::BAD_REQUEST, "Invalid date format, expected YYYY-MM-DD".to_string())
+        (
+            StatusCode::BAD_REQUEST,
+            "Invalid date format, expected YYYY-MM-DD".to_string(),
+        )
     })?;
 
     sqlx::query("
@@ -317,27 +342,49 @@ pub async fn create_daily_log(
         (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
     })?;
 
-    Ok((StatusCode::CREATED, Json(json!({"success": true, "message": "Log Created Successfully"}))))
+    Ok((
+        StatusCode::CREATED,
+        Json(json!({"success": true, "message": "Log Created Successfully"})),
+    ))
 }
 
 pub async fn login(
     State(pool): State<PgPool>,
     Json(input): Json<LoginInput>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
-    let user_record = sqlx::query("SELECT id, name, email, password_hash, role, created_at FROM users WHERE email = $1")
-        .bind(&input.email)
-        .fetch_optional(&pool)
-        .await
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"message": "Database error"}))))?
-        .ok_or((StatusCode::UNAUTHORIZED, Json(json!({"message": "Invalid email or password"}))))?;
+    let user_record = sqlx::query(
+        "SELECT id, name, email, password_hash, role, created_at FROM users WHERE email = $1",
+    )
+    .bind(&input.email)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"message": "Database error"})),
+        )
+    })?
+    .ok_or((
+        StatusCode::UNAUTHORIZED,
+        Json(json!({"message": "Invalid email or password"})),
+    ))?;
 
     let user_password_hash: String = user_record.get("password_hash");
-    let parsed_hash = PasswordHash::new(&user_password_hash)
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"message": "Internal error"}))))?;
+    let parsed_hash = PasswordHash::new(&user_password_hash).map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"message": "Internal error"})),
+        )
+    })?;
 
     Argon2::default()
         .verify_password(input.password.as_bytes(), &parsed_hash)
-        .map_err(|_| (StatusCode::UNAUTHORIZED, Json(json!({"message": "Invalid email or password"}))))?;
+        .map_err(|_| {
+            (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"message": "Invalid email or password"})),
+            )
+        })?;
 
     let expiration = chrono::Utc::now()
         .checked_add_signed(chrono::Duration::hours(24))
@@ -355,7 +402,12 @@ pub async fn login(
         &claims,
         &EncodingKey::from_secret("secret_key_change_me".as_ref()),
     )
-    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"message": "Internal error"}))))?;
+    .map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"message": "Internal error"})),
+        )
+    })?;
 
     let user = User {
         id: user_id,
@@ -372,13 +424,16 @@ pub async fn get_all_users(
     State(pool): State<PgPool>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
     let users = sqlx::query_as::<_, User>(
-        "SELECT id, name, email, role, created_at FROM users ORDER BY created_at DESC"
+        "SELECT id, name, email, role, created_at FROM users ORDER BY created_at DESC",
     )
     .fetch_all(&pool)
     .await
     .map_err(|e| {
         tracing::error!("Database error: {}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Database error".to_string(),
+        )
     })?;
 
     Ok(Json(users))
@@ -392,20 +447,25 @@ pub async fn register_user(
     let argon2 = Argon2::default();
     let password_hash = argon2
         .hash_password(input.password.as_bytes(), &salt)
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Encoding error".to_string()))?
+        .map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Encoding error".to_string(),
+            )
+        })?
         .to_string();
 
     sqlx::query("INSERT INTO users (name, email, password_hash, role) VALUES ($1, $2, $3, $4)")
-    .bind(&input.name)
-    .bind(&input.email)
-    .bind(&password_hash)
-    .bind(&input.role)
-    .execute(&pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Registration error: {}", e);
-        (StatusCode::CONFLICT, "Email already exists".to_string())
-    })?;
+        .bind(&input.name)
+        .bind(&input.email)
+        .bind(&password_hash)
+        .bind(&input.role)
+        .execute(&pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Registration error: {}", e);
+            (StatusCode::CONFLICT, "Email already exists".to_string())
+        })?;
 
     Ok(StatusCode::CREATED)
 }
@@ -418,8 +478,13 @@ pub async fn delete_user(
         .bind(id)
         .execute(&pool)
         .await
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string()))?;
-    
+        .map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Database error".to_string(),
+            )
+        })?;
+
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -430,7 +495,7 @@ pub async fn update_unit(
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
     let ct_expired = match input.ct_expired {
         Some(ref d) if !d.is_empty() => NaiveDate::from_str(d).ok(),
-        _ => None
+        _ => None,
     };
 
     sqlx::query(
@@ -453,7 +518,7 @@ pub async fn update_unit(
         tracing::error!("Update error: {}", e);
         (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
     })?;
-    
+
     Ok(StatusCode::OK)
 }
 
@@ -472,14 +537,17 @@ pub async fn get_unit_logs(
          remarks 
          FROM daily_logs 
          WHERE unit_id = $1 
-         ORDER BY date DESC, shift DESC LIMIT 50"
+         ORDER BY date DESC, shift DESC LIMIT 50",
     )
     .bind(unit_id)
     .fetch_all(&pool)
     .await
     .map_err(|e| {
         tracing::error!("Logs fetch error: {}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Database error".to_string(),
+        )
     })?
     .into_iter()
     .map(|r: sqlx::postgres::PgRow| {
@@ -513,7 +581,12 @@ pub async fn update_profile(
             let argon2 = Argon2::default();
             let password_hash = argon2
                 .hash_password(password.as_bytes(), &salt)
-                .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Encoding error".to_string()))?
+                .map_err(|_| {
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        "Encoding error".to_string(),
+                    )
+                })?
                 .to_string();
 
             sqlx::query("UPDATE users SET name = $1, email = $2, password_hash = $3 WHERE id = $4")
@@ -550,13 +623,16 @@ pub async fn get_work_locations(
     State(pool): State<PgPool>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
     let locations = sqlx::query_as::<_, WorkLocation>(
-        "SELECT id, name, description, created_at FROM work_locations ORDER BY name ASC"
+        "SELECT id, name, description, created_at FROM work_locations ORDER BY name ASC",
     )
     .fetch_all(&pool)
     .await
     .map_err(|e| {
         tracing::error!("Database error fetching work locations: {:?}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, format!("Database Error: {}", e))
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Database Error: {}", e),
+        )
     })?;
 
     Ok(Json(locations))
@@ -573,7 +649,10 @@ pub async fn create_work_location(
         .await
         .map_err(|e| {
             tracing::error!("Work location creation error: {}", e);
-            (StatusCode::CONFLICT, "Work location name already exists or data error".to_string())
+            (
+                StatusCode::CONFLICT,
+                "Work location name already exists or data error".to_string(),
+            )
         })?;
 
     Ok(StatusCode::CREATED)
@@ -592,9 +671,12 @@ pub async fn update_work_location(
         .await
         .map_err(|e| {
             tracing::error!("Update error: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Database error".to_string(),
+            )
         })?;
-    
+
     Ok(StatusCode::OK)
 }
 
@@ -606,8 +688,13 @@ pub async fn delete_work_location(
         .bind(id)
         .execute(&pool)
         .await
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string()))?;
-    
+        .map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Database error".to_string(),
+            )
+        })?;
+
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -628,7 +715,7 @@ pub async fn get_operator_assignments(
         JOIN employees e ON oa.employee_id = e.id
         JOIN units u ON oa.unit_id = u.id
         ORDER BY oa.assignment_date DESC, oa.shift ASC
-        "#
+        "#,
     )
     .fetch_all(&pool)
     .await
@@ -655,9 +742,8 @@ pub async fn create_operator_assignment(
     State(pool): State<PgPool>,
     Json(input): Json<CreateOperatorAssignmentInput>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let parsed_date = NaiveDate::from_str(&input.assignment_date).map_err(|_| {
-        (StatusCode::BAD_REQUEST, "Invalid date format".to_string())
-    })?;
+    let parsed_date = NaiveDate::from_str(&input.assignment_date)
+        .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid date format".to_string()))?;
 
     // 1. Check unit requirements
     let unit_row = sqlx::query("SELECT licence FROM units WHERE id = $1")
@@ -665,7 +751,7 @@ pub async fn create_operator_assignment(
         .fetch_one(&pool)
         .await
         .map_err(|_| (StatusCode::NOT_FOUND, "Unit not found".to_string()))?;
-    
+
     let unit_licence: Option<String> = unit_row.get(0);
 
     // 2. Check operator qualifications
@@ -674,7 +760,7 @@ pub async fn create_operator_assignment(
         .fetch_one(&pool)
         .await
         .map_err(|_| (StatusCode::NOT_FOUND, "Operator not found".to_string()))?;
-    
+
     let held_licences: Vec<String> = op_row.get(0);
     let position: Option<String> = op_row.get(1);
 
@@ -682,7 +768,13 @@ pub async fn create_operator_assignment(
     if let Some(req_lic) = unit_licence {
         if !req_lic.is_empty() {
             if !held_licences.contains(&req_lic) {
-                return Err((StatusCode::BAD_REQUEST, format!("Operator tidak memiliki license yang dibutuhkan: {}", req_lic)));
+                return Err((
+                    StatusCode::BAD_REQUEST,
+                    format!(
+                        "Operator tidak memiliki license yang dibutuhkan: {}",
+                        req_lic
+                    ),
+                ));
             }
         }
     }
@@ -719,8 +811,13 @@ pub async fn delete_operator_assignment(
         .bind(id)
         .execute(&pool)
         .await
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string()))?;
-    
+        .map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Database error".to_string(),
+            )
+        })?;
+
     Ok(StatusCode::NO_CONTENT)
 }
 
