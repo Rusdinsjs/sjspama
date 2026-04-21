@@ -85,7 +85,7 @@ async fn main() {
         .route("/api/positions", get(handlers::get_positions).post(handlers::create_position))
         .route("/api/positions/:id", delete(handlers::delete_position))
         .route("/api/licenses", get(handlers::get_licenses).post(handlers::create_license))
-        .route("/api/licenses/:id", delete(handlers::delete_license))
+        .route("/api/licenses/:id", delete(handlers::delete_license).put(handlers::update_license))
         .layer(tower_http::trace::TraceLayer::new_for_http())
         .layer(cors)
         .with_state(pool);

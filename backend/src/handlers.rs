@@ -941,3 +941,18 @@ pub async fn delete_license(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
     Ok(StatusCode::NO_CONTENT)
 }
+
+pub async fn update_license(
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+    Json(input): Json<CreateLicenseInput>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    sqlx::query("UPDATE licenses SET name = $1, description = $2 WHERE id = $3")
+        .bind(&input.name)
+        .bind(&input.description)
+        .bind(id)
+        .execute(&pool)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(StatusCode::OK)
+}

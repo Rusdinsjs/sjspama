@@ -14,10 +14,20 @@
 
   // Filtering and Sorting State
   let searchTerm = $state('');
-  let filterPosition = $state('');
-  let filterStatus = $state('');
+  let searchField = $state('all');
+  let dynamicFilterField = $state('');
+  let dynamicFilterValue = $state('');
   let sortBy = $state('name');
   let sortOrder = $state<'asc' | 'desc'>('asc');
+
+  // Helper for dynamic filter values
+  let dynamicFilterValues = $derived.by(() => {
+    if (!dynamicFilterField) return [];
+    const values = [...new Set(employees.map(emp => emp[dynamicFilterField]))]
+      .filter(v => v !== null && v !== undefined && v !== '')
+      .sort();
+    return values;
+  });
 
   // Derived filtered and sorted employees
   let filteredEmployees = $derived.by(() => {
@@ -26,33 +36,51 @@
     // Search
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      result = result.filter(emp => 
-        emp.name?.toLowerCase().includes(term) || 
-        emp.nik?.toLowerCase().includes(term) ||
-        emp.email?.toLowerCase().includes(term)
-      );
+      result = result.filter(emp => {
+        if (searchField === 'name') return emp.name?.toLowerCase().includes(term);
+        if (searchField === 'nik') return emp.nik?.toLowerCase().includes(term);
+        if (searchField === 'email') return emp.email?.toLowerCase().includes(term);
+        // Default 'all'
+        return emp.name?.toLowerCase().includes(term) || 
+               emp.nik?.toLowerCase().includes(term) ||
+               emp.email?.toLowerCase().includes(term);
+      });
     }
 
-    // Filter by Position
-    if (filterPosition) {
-      result = result.filter(emp => emp.position === filterPosition);
-    }
-
-    // Filter by Status
-    if (filterStatus) {
-      result = result.filter(emp => emp.status === filterStatus);
+    // Dynamic Filter
+    if (dynamicFilterField && dynamicFilterValue) {
+      result = result.filter(emp => emp[dynamicFilterField] === dynamicFilterValue);
     }
 
     // Sort
     result.sort((a, b) => {
-      let valA = a[sortBy] || '';
-      let valB = b[sortBy] || '';
+      let valA = a[sortBy];
+      let valB = b[sortBy];
       
-      if (typeof valA === 'string') valA = valA.toLowerCase();
-      if (typeof valB === 'string') valB = valB.toLowerCase();
+      // Handle nulls
+      if (valA === null || valA === undefined) valA = '';
+      if (valB === null || valB === undefined) valB = '';
 
-      if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
-      if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+      // Date detection (YYYY-MM-DD or similar)
+      const isDate = (val: any) => typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val);
+      
+      if (isDate(valA) && isDate(valB)) {
+        const timeA = new Date(valA).getTime();
+        const timeB = new Date(valB).getTime();
+        return sortOrder === 'asc' ? timeA - timeB : timeB - timeA;
+      }
+
+      // Numeric detection
+      if (!isNaN(parseFloat(valA)) && isFinite(valA) && !isNaN(parseFloat(valB)) && isFinite(valB)) {
+        return sortOrder === 'asc' ? valA - valB : valB - valA;
+      }
+
+      // String fallback
+      let strA = String(valA).toLowerCase();
+      let strB = String(valB).toLowerCase();
+
+      if (strA < strB) return sortOrder === 'asc' ? -1 : 1;
+      if (strA > strB) return sortOrder === 'asc' ? 1 : -1;
       return 0;
     });
 
@@ -236,31 +264,72 @@
   </div>
 
   <!-- Filter and Search Bar -->
-  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 p-6 glass rounded-3xl border border-white/10 shadow-xl">
-    <div class="col-span-1 md:col-span-2 relative">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-      </svg>
-      <input 
-        type="text" 
-        bind:value={searchTerm} 
-        placeholder="Cari NAMA, NIK atau EMAIL..." 
-        class="w-full bg-slate-900/50 border border-white/5 rounded-2xl pl-12 pr-4 py-4 text-white focus:outline-none focus:border-sky-500/50 transition-all placeholder:text-slate-600 text-sm"
-      >
-    </div>
-    
-    <select bind:value={filterPosition} class="bg-slate-900/50 border border-white/5 rounded-2xl px-4 py-4 text-white focus:outline-none focus:border-sky-500/50 text-sm appearance-none">
-      <option value="">Semua Jabatan</option>
-      {#each positions as pos}
-        <option value={pos.name}>{pos.name}</option>
-      {/each}
-    </select>
+  <div class="glass p-8 rounded-3xl border border-white/10 shadow-xl space-y-6">
+    <div class="flex flex-col md:flex-row gap-4">
+      <!-- Search Section -->
+      <div class="flex-1 flex gap-2">
+        <select bind:value={searchField} class="bg-white/5 border border-white/10 rounded-2xl px-4 py-4 text-white focus:outline-none focus:border-sky-500/50 text-xs font-bold uppercase tracking-wider appearance-none">
+          <option value="all">Semua Kolom</option>
+          <option value="name">Nama</option>
+          <option value="nik">NIK</option>
+          <option value="email">Email</option>
+        </select>
+        <div class="flex-1 relative">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input 
+            type="text" 
+            bind:value={searchTerm} 
+            placeholder="Cari data..." 
+            class="w-full bg-slate-900/50 border border-white/5 rounded-2xl pl-12 pr-4 py-4 text-white focus:outline-none focus:border-sky-500/50 transition-all placeholder:text-slate-600 text-sm"
+          >
+        </div>
+      </div>
 
-    <select bind:value={filterStatus} class="bg-slate-900/50 border border-white/5 rounded-2xl px-4 py-4 text-white focus:outline-none focus:border-sky-500/50 text-sm appearance-none">
-      <option value="">Semua Status</option>
-      <option value="Active">Active</option>
-      <option value="Inactive">Inactive</option>
-    </select>
+      <!-- Dynamic Filter Section -->
+      <div class="flex gap-2">
+        <select bind:value={dynamicFilterField} onchange={() => dynamicFilterValue = ''} class="bg-slate-900/50 border border-white/5 rounded-2xl px-4 py-4 text-white focus:outline-none focus:border-sky-500/50 text-xs font-bold uppercase tracking-wider appearance-none min-w-[150px]">
+          <option value="">Pilih Filter...</option>
+          <option value="position">Jabatan</option>
+          <option value="status">Status</option>
+          <option value="company">Perusahaan</option>
+          <option value="department">Departemen</option>
+          <option value="gender">Jenis Kelamin</option>
+          <option value="religion">Agama</option>
+          <option value="contract_type">Tipe Kontrak</option>
+        </select>
+
+        {#if dynamicFilterField}
+          <select bind:value={dynamicFilterValue} class="bg-slate-900/50 border border-sky-500/30 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-sky-500 text-sm appearance-none min-w-[180px] animate-in slide-in-from-left duration-300">
+            <option value="">Semua Item</option>
+            {#each dynamicFilterValues as val}
+              <option value={val}>{val}</option>
+            {/each}
+          </select>
+        {/if}
+      </div>
+    </div>
+
+    <!-- Sorting Selection Section -->
+    <div class="flex flex-wrap items-center gap-4 pt-4 border-t border-white/5">
+      <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Urutkan Berdasarkan:</span>
+      <div class="flex gap-2">
+        <select bind:value={sortBy} class="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-sky-500/50 text-xs appearance-none">
+          <option value="name">Nama</option>
+          <option value="nik">NIK</option>
+          <option value="position">Jabatan</option>
+          <option value="company">Company</option>
+          <option value="join_date">Tanggal Gabung</option>
+          <option value="birth_date">Tanggal Lahir</option>
+          <option value="simper_expiry">Expired Simper</option>
+        </select>
+        <select bind:value={sortOrder} class="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-sky-500/50 text-xs appearance-none">
+          <option value="asc">Meningkat (A-Z)</option>
+          <option value="desc">Menurun (Z-A)</option>
+        </select>
+      </div>
+    </div>
   </div>
 
   <div class="glass rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl">
